@@ -1,14 +1,15 @@
-import uvicorn
-import logging
+from contextlib import asynccontextmanager
 
 from elasticsearch import AsyncElasticsearch
-from fastapi.responses import ORJSONResponse
 from fastapi import FastAPI
+from fastapi.responses import ORJSONResponse
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from redis.asyncio import Redis
-from contextlib import asynccontextmanager
 
 from app.api.v1 import films, genres, persons
 from app.core.config import settings
+from app.core.middleware import before_request
+from app.core.tracer import configure_tracer, init_tracer
 from app.db import elastic, redis
 from app.dependencies.main import setup_dependencies
 
@@ -33,6 +34,11 @@ app = FastAPI(
     default_response_class=ORJSONResponse,
     lifespan=lifespan
 )
+
+init_tracer(app)
+FastAPIInstrumentor.instrument_app(app)
+
+app.middleware("http")(before_request)
 
 app.include_router(films.router, prefix="/api/v1/films", tags=["films"])
 app.include_router(genres.router, prefix="/api/v1/genres", tags=["genres"])
