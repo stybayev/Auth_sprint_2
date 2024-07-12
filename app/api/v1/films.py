@@ -1,11 +1,14 @@
 from typing import List
 from http import HTTPStatus
 from fastapi import APIRouter, Depends, Path, HTTPException, Query
+
+import app.core.tracer
 from app.services.film import FilmServiceABC
 from app.models.film import Film, Films
 from app.models.base_model import SearchParams
 from app.utils.dc_objects import PaginatedParams
 from uuid import UUID
+from app.core.tracer import traced
 
 router = APIRouter()
 
@@ -25,6 +28,7 @@ async def get_film(
     return film
 
 
+@app.core.tracer.traced(span_name='get_films')
 @router.get("/", response_model=List[Films])
 async def get_films(
         *,

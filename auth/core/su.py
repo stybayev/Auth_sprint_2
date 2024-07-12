@@ -21,7 +21,7 @@ def create_su(
         'dbname': os.getenv('POSTGRES_DB'),
         'user': os.getenv('POSTGRES_USER'),
         'password': os.getenv('POSTGRES_PASSWORD'),
-        'host': os.getenv('UVICORN_HOST'),
+        'host': os.getenv('UVICORN_HOST'),  # TODO тут должен быть хост базы данных в нашем случае "db"
         'port': os.getenv('POSTGRES_PORT')
     }
 

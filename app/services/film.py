@@ -2,6 +2,8 @@ import orjson
 
 from abc import ABC, abstractmethod
 from hashlib import md5
+
+import app.core.tracer
 from app.models.film import Film, Films
 from app.models.base_model import SearchParams
 from uuid import UUID
@@ -57,6 +59,7 @@ class FilmService(FilmServiceABC):
 
         return entity
 
+    @app.core.tracer.traced('process_get_films')
     async def get_films(
             self,
             params: SearchParams

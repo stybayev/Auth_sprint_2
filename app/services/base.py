@@ -8,6 +8,7 @@ from hashlib import md5
 import requests
 from pydantic import ValidationError
 
+import app.core.tracer
 from app.models.base_model import PaginatedParams, BaseModel, SearchParams
 from app.models.film import Film
 from elasticsearch import AsyncElasticsearch
@@ -15,9 +16,11 @@ from elasticsearch.exceptions import NotFoundError
 from typing import TypeVar, Type, Generic, NoReturn, List
 from uuid import UUID
 from redis.asyncio import Redis
-
+from opentelemetry import trace
 ModelType = TypeVar("ModelType", bound=BaseModel)
 PaginatedModel = TypeVar("PaginatedModel", bound=PaginatedParams)
+
+tracer = trace.get_tracer(__name__)
 
 
 class Repository(ABC):
@@ -51,19 +54,22 @@ class RepositoryElastic(Repository, Generic[ModelType, PaginatedModel]):
         self.elastic = elastic
         self.index = index
 
+    # @app.core.tracer.traced("elasricsearch_find")
     async def find(self, doc_id: UUID) -> Type[ModelType] or None:
-        try:
-            doc = await self.elastic.get(
-                index=self.index,
-                id=str(doc_id)
-            )
-        except NotFoundError:
-            return None
-        short_name = doc["_source"].get("file")
-        if short_name:
-            r = requests.get(f"{os.getenv('FILE_SERVICE_URL')}/presigned-url/{short_name}")
-            doc["_source"]["file"] = r.json()
-        return self._model(**doc["_source"])
+        with tracer.start_as_current_span('elasticsearch-request'):
+            try:
+                with tracer.start_as_current_span('elasticsearch-111'):
+                    doc = await self.elastic.get(
+                        index=self.index,
+                        id=str(doc_id)
+                    )
+            except NotFoundError:
+                return None
+            short_name = doc["_source"].get("file")
+            if short_name:
+                r = requests.get(f"{os.getenv('FILE_SERVICE_URL')}/presigned-url/{short_name}")
+                doc["_source"]["file"] = r.json()
+            return self._model(**doc["_source"])
 
     async def put(self):
         pass
@@ -71,6 +77,7 @@ class RepositoryElastic(Repository, Generic[ModelType, PaginatedModel]):
     async def put_multy(self):
         pass
 
+    @app.core.tracer.traced("elasricsearch_find_multy")
     async def find_multy(
             self,
             params: SearchParams
@@ -185,6 +192,7 @@ class RepositoryRedis(Repository, Generic[ModelType, PaginatedModel]):
         self.index = index
         self.cache_timeout = 60 * 5  # 5 минут
 
+    @app.core.tracer.traced("redis_find")
     async def find(
             self,
             doc_id: UUID
@@ -199,6 +207,7 @@ class RepositoryRedis(Repository, Generic[ModelType, PaginatedModel]):
             return None
         return self._model.parse_raw(data)
 
+    @app.core.tracer.traced("redis_put")
     async def put(self, entity: Type[ModelType]) -> NoReturn:
         """
         Запись данных в кеш Redis
@@ -210,6 +219,7 @@ class RepositoryRedis(Repository, Generic[ModelType, PaginatedModel]):
             self.cache_timeout,
         )
 
+    @app.core.tracer.traced("redis_put_multy")
     async def put_multy(self, entities: List[PaginatedModel], params: dict):
         entities = [entity.json() for entity in entities]
         data = orjson.dumps(entities)
@@ -220,6 +230,7 @@ class RepositoryRedis(Repository, Generic[ModelType, PaginatedModel]):
             self.cache_timeout
         )
 
+    @app.core.tracer.traced("redis_find_multy")
     async def find_multy(self, param_hash) -> List[PaginatedModel]:
         data = await self.redis.get(f"{self.index}:{param_hash}")
         if not data:

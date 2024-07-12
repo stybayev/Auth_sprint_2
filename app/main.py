@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from redis.asyncio import Redis
-
+from opentelemetry import trace
 from app.api.v1 import films, genres, persons
 from app.core.config import settings
 from app.core.middleware import before_request

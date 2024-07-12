@@ -9,7 +9,10 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 
 def traced(span_name: str):
-    # Декоратор для подключения трейсера к запросу
+    """
+    Декоратор для подключения трейсера к запросу
+    """
+
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
@@ -25,7 +28,7 @@ def traced(span_name: str):
 def configure_tracer():
     # Установка имени сервиса
     resource = Resource(attributes={
-        SERVICE_NAME: "movies-api"
+        SERVICE_NAME: "auth-api"
     })
     # Создаем провайдера трейсера
     trace.set_tracer_provider(TracerProvider(resource=resource))

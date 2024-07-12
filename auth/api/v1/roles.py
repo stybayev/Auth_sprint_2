@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Path
 from fastapi_jwt_auth import AuthJWT
 
+import auth.core.tracer
 from auth.schema.roles import (AssignRoleResponse, RoleResponse, RoleSchema,
                                RoleUpdateSchema, UserPermissionsSchema)
 from auth.services.roles import RoleService, get_role_service
@@ -10,6 +11,7 @@ from auth.services.roles import RoleService, get_role_service
 router = APIRouter()
 
 
+@auth.core.tracer.traced("auth_create_role")
 @router.post("/", response_model=dict)
 async def create_role(role: RoleSchema, service: RoleService = Depends(get_role_service),
                       Authorize: AuthJWT = Depends()) -> RoleResponse:
@@ -20,6 +22,7 @@ async def create_role(role: RoleSchema, service: RoleService = Depends(get_role_
     return RoleResponse.from_orm(new_role)
 
 
+@auth.core.tracer.traced("auth_delete_role")
 @router.delete("/")
 async def delete_role(role_id: UUID = None, role_name: str = None,
                       service: RoleService = Depends(get_role_service),
@@ -37,6 +40,7 @@ async def delete_role(role_id: UUID = None, role_name: str = None,
     return result
 
 
+@auth.core.tracer.traced("auth_update_role")
 @router.patch("/{role_id}")
 async def update_role(role_id: UUID, data: RoleUpdateSchema,
                       service: RoleService = Depends(get_role_service),
@@ -52,6 +56,7 @@ async def update_role(role_id: UUID, data: RoleUpdateSchema,
     return RoleResponse.from_orm(updated_role)
 
 
+@auth.core.tracer.traced("auth_get_roles")
 @router.get("/")
 async def get_roles(service: RoleService = Depends(get_role_service)):
     """
@@ -61,6 +66,7 @@ async def get_roles(service: RoleService = Depends(get_role_service)):
     return roles
 
 
+@auth.core.tracer.traced("auth_assign_role_to_user")
 @router.post("/users/{user_id}/roles/{role_id}", response_model=AssignRoleResponse)
 async def assign_role_to_user(
         user_id: UUID = Path(..., description="User ID"),
@@ -91,6 +97,7 @@ async def assign_role_to_user(
     return AssignRoleResponse(user_id=user_id, role_id=role_id, message=result['message'])
 
 
+@auth.core.tracer.traced("auth_remove_role_from_user")
 @router.delete("/users/{user_id}/roles/{role_id}")
 async def remove_role_from_user(user_id: UUID = Path(..., description="User ID"),
                                 role_id: UUID = Path(..., description="Role ID"),
@@ -103,6 +110,7 @@ async def remove_role_from_user(user_id: UUID = Path(..., description="User ID")
     return result
 
 
+@auth.core.tracer.traced("auth_api_check_user_permissions")
 @router.get("/users/{user_id}/permissions")
 async def check_user_permissions(user_id: UUID = Path(..., description="User ID"),
                                  service: RoleService = Depends(get_role_service)) -> UserPermissionsSchema:
