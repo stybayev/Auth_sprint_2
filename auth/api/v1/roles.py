@@ -13,8 +13,10 @@ router = APIRouter()
 
 @auth.core.tracer.traced("auth_create_role")
 @router.post("/", response_model=dict)
-async def create_role(role: RoleSchema, service: RoleService = Depends(get_role_service),
-                      Authorize: AuthJWT = Depends()) -> RoleResponse:
+async def create_role(role: RoleSchema,
+                      service: RoleService = Depends(get_role_service),
+                      Authorize: AuthJWT = Depends()
+                      ) -> RoleResponse:
     """
     Создание роли
     """
@@ -119,10 +121,3 @@ async def check_user_permissions(user_id: UUID = Path(..., description="User ID"
     """
     result = await service.get_user_permissions(user_id=user_id)
     return result
-
-# @router.post("/logout/others", response_model=dict)
-# async def logout_other_sessions():
-#     """
-#     Реализация кнопки "Выйти из остальных аккаунтов"
-#     """
-#     pass
