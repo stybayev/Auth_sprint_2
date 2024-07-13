@@ -33,23 +33,23 @@ class UserService:
         self.redis = redis,
         self.token_service = token_service
 
-    @auth.core.tracer.traced("auth_service_get_by_login")
+    @auth.core.tracer.traced(__name__)
     async def get_by_login(self, login: str) -> Optional[User]:
         """
         Поиск пользователя по логину
         """
-        with tracer.start_as_current_span('auth_service_postgres_request'):
+        with tracer.start_as_current_span('postgres_request'):
             result = await self.db_session.execute(select(User).where(User.login == login))
             return result.scalar_one_or_none()
 
-    @auth.core.tracer.traced("auth_service_create_user")
+    @auth.core.tracer.traced(__name__)
     async def create_user(self, login: str, password: str, first_name: Optional[str] = None,
                           last_name: Optional[str] = None) -> User:
         """
         Создание пользователя
         """
         new_user = User(login=login, password=password, first_name=first_name, last_name=last_name)
-        with tracer.start_as_current_span('auth_service_postgres_request'):
+        with tracer.start_as_current_span('postgres_request'):
             self.db_session.add(new_user)
             try:
                 await self.db_session.commit()
@@ -59,12 +59,12 @@ class UserService:
                 await self.db_session.rollback()
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Login already registered')
 
-    @auth.core.tracer.traced("auth_service_get_user_roles")
+    @auth.core.tracer.traced(__name__)
     async def get_user_roles(self, user_id: uuid.UUID) -> List[str]:
         """
         Получение ролей пользователя из БД.
         """
-        with tracer.start_as_current_span('auth_service_postgres_request'):
+        with tracer.start_as_current_span('postgres_request'):
             result = await self.db_session.execute(
                 select(Role.name).
                 join(UserRole, Role.id == UserRole.role_id).
@@ -73,7 +73,7 @@ class UserService:
             roles = result.scalars().all()
         return roles
 
-    @auth.core.tracer.traced("auth_service_login")
+    @auth.core.tracer.traced(__name__)
     async def login(self, login: str, password: str, Authorize: AuthJWT, user_agent: str) -> TokenResponse:
         """
         Вход пользователя
@@ -84,7 +84,7 @@ class UserService:
 
         roles = await self.get_user_roles(db_user.id)
         user_claims = {'id': str(db_user.id), 'roles': roles}
-        with tracer.start_as_current_span('auth_service_postgres_request'):
+        with tracer.start_as_current_span('postgres_request'):
             await self.db_session.execute(
                 insert(LoginHistory).values(
                     user_id=str(db_user.id),
@@ -95,7 +95,7 @@ class UserService:
             await self.db_session.commit()
         return await self.token_service.generate_tokens(Authorize, user_claims, db_user.id)
 
-    @auth.core.tracer.traced("auth_service_update_user_credentials")
+    @auth.core.tracer.traced(__name__)
     async def update_user_credentials(self, user_id: uuid.UUID, login: Optional[str] = None,
                                       password: Optional[str] = None) -> User:
         """
@@ -109,7 +109,7 @@ class UserService:
             user.login = login
         if password:
             user.password = generate_password_hash(password)
-        with tracer.start_as_current_span("auth_service_postgres_request"):
+        with tracer.start_as_current_span("postgres_request"):
             try:
                 await self.db_session.commit()
                 await self.db_session.refresh(user)
@@ -133,7 +133,7 @@ class UserService:
         await self.token_service.add_tokens_to_invalid(access_jti, refresh_jti, user_id)
         return True
 
-    @auth.core.tracer.traced("auth_service_refresh_access_token")
+    @auth.core.tracer.traced(__name__)
     @refresh_token_required
     async def refresh_access_token(self, authorize: AuthJWT) -> TokenResponse:
         """
@@ -156,14 +156,14 @@ class UserService:
         await self.token_service.add_tokens_to_invalid(raw_jwt['access_jti'], raw_jwt['jti'], user_id)
         return await self.token_service.generate_tokens(authorize, user_claims, user_id)
 
-    @auth.core.tracer.traced("auth_service_get_login_history")
+    @auth.core.tracer.traced(__name__)
     @access_token_required
     async def get_login_history(self, authorize: AuthJWT, page_size: int, page_number: int) -> List[
         LoginHistoryResponse]:
         user_id = uuid.UUID(authorize.get_jwt_subject())
         offset = (page_number - 1) * page_size
 
-        with tracer.start_as_current_span("auth_service_postgres_request"):
+        with tracer.start_as_current_span("postgres_request"):
             result = await self.db_session.execute(
                 select(LoginHistory)
                 .where(LoginHistory.user_id == user_id)

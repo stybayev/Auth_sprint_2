@@ -1,14 +1,14 @@
-import orjson
-
 from abc import ABC, abstractmethod
 from hashlib import md5
-
-import app.core.tracer
-from app.models.film import Film, Films
-from app.models.base_model import SearchParams
-from uuid import UUID
-from app.services.base import RepositoryElastic, RepositoryRedis
 from typing import List
+from uuid import UUID
+
+import orjson
+
+from app.core.tracer import traced
+from app.models.base_model import SearchParams
+from app.models.film import Film, Films
+from app.services.base import RepositoryElastic, RepositoryRedis
 
 
 class FilmRepository(RepositoryElastic[Film, Films]):
@@ -59,7 +59,7 @@ class FilmService(FilmServiceABC):
 
         return entity
 
-    @app.core.tracer.traced('process_get_films')
+    @traced(__name__)
     async def get_films(
             self,
             params: SearchParams

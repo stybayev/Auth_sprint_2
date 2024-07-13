@@ -1,9 +1,10 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Depends, Path, Request
 from fastapi_jwt_auth import AuthJWT
+from opentelemetry import trace
 
-import auth.core.tracer
+from auth.core.tracer import traced
 from auth.schema.roles import (AssignRoleResponse, RoleResponse, RoleSchema,
                                RoleUpdateSchema, UserPermissionsSchema)
 from auth.services.roles import RoleService, get_role_service
@@ -11,20 +12,25 @@ from auth.services.roles import RoleService, get_role_service
 router = APIRouter()
 
 
-@auth.core.tracer.traced("auth_create_role")
 @router.post("/", response_model=dict)
-async def create_role(role: RoleSchema, service: RoleService = Depends(get_role_service),
+@traced(__name__)
+async def create_role(role: RoleSchema, request: Request, service: RoleService = Depends(get_role_service),
                       Authorize: AuthJWT = Depends()) -> RoleResponse:
     """
     Создание роли
     """
-    new_role = await service.create_role(role, Authorize=Authorize)
+    request_id = request.headers.get('X-Request-Id')
+    tracer = trace.get_tracer(__name__)
+
+    with tracer.start_as_current_span("auth_api_create_role") as span:
+        span.set_attribute('http.request_id', request_id)
+        new_role = await service.create_role(role, Authorize=Authorize)
     return RoleResponse.from_orm(new_role)
 
 
-@auth.core.tracer.traced("auth_delete_role")
 @router.delete("/")
-async def delete_role(role_id: UUID = None, role_name: str = None,
+@traced(__name__)
+async def delete_role(request: Request, role_id: UUID = None, role_name: str = None,
                       service: RoleService = Depends(get_role_service),
                       Authorize: AuthJWT = Depends()) -> dict:
     """
@@ -36,13 +42,18 @@ async def delete_role(role_id: UUID = None, role_name: str = None,
 
     Необходимо указать либо role_id, либо name.
     """
-    result = await service.delete_role(Authorize=Authorize, role_id=role_id, role_name=role_name)
+    request_id = request.headers.get('X-Request-Id')
+    tracer = trace.get_tracer(__name__)
+
+    with tracer.start_as_current_span("auth_api_delete_role") as span:
+        span.set_attribute('http.request_id', request_id)
+        result = await service.delete_role(Authorize=Authorize, role_id=role_id, role_name=role_name)
     return result
 
 
-@auth.core.tracer.traced("auth_update_role")
 @router.patch("/{role_id}")
-async def update_role(role_id: UUID, data: RoleUpdateSchema,
+@traced(__name__)
+async def update_role(request: Request, role_id: UUID, data: RoleUpdateSchema,
                       service: RoleService = Depends(get_role_service),
                       Authorize: AuthJWT = Depends()) -> RoleResponse:
     """
@@ -52,23 +63,30 @@ async def update_role(role_id: UUID, data: RoleUpdateSchema,
     - role_id: UUID - ID роли, которую нужно обновить.
     - data: RoleUpdateSchema - Данные для обновления.
     """
-    updated_role = await service.update_role(role_id=role_id, data=data, Authorize=Authorize)
+    request_id = request.headers.get('X-Request-Id')
+    tracer = trace.get_tracer(__name__)
+
+    with tracer.start_as_current_span("auth_api_update_role") as span:
+        span.set_attribute('http.request_id', request_id)
+        updated_role = await service.update_role(role_id=role_id, data=data, Authorize=Authorize)
     return RoleResponse.from_orm(updated_role)
 
 
-@auth.core.tracer.traced("auth_get_roles")
 @router.get("/")
-async def get_roles(service: RoleService = Depends(get_role_service)):
+@traced(__name__)
+async def get_roles(request: Request, service: RoleService = Depends(get_role_service)):
     """
     Просмотр всех ролей
     """
+
     roles = await service.get_all_roles()
     return roles
 
 
-@auth.core.tracer.traced("auth_assign_role_to_user")
 @router.post("/users/{user_id}/roles/{role_id}", response_model=AssignRoleResponse)
+@traced(__name__)
 async def assign_role_to_user(
+        request: Request,
         user_id: UUID = Path(..., description="User ID"),
         role_id: UUID = Path(..., description="Role ID"),
         service: RoleService = Depends(get_role_service),
@@ -97,9 +115,10 @@ async def assign_role_to_user(
     return AssignRoleResponse(user_id=user_id, role_id=role_id, message=result['message'])
 
 
-@auth.core.tracer.traced("auth_remove_role_from_user")
 @router.delete("/users/{user_id}/roles/{role_id}")
-async def remove_role_from_user(user_id: UUID = Path(..., description="User ID"),
+@traced(__name__)
+async def remove_role_from_user(request: Request,
+                                user_id: UUID = Path(..., description="User ID"),
                                 role_id: UUID = Path(..., description="Role ID"),
                                 service: RoleService = Depends(get_role_service),
                                 Authorize: AuthJWT = Depends()) -> dict:
@@ -110,19 +129,13 @@ async def remove_role_from_user(user_id: UUID = Path(..., description="User ID")
     return result
 
 
-@auth.core.tracer.traced("auth_api_check_user_permissions")
 @router.get("/users/{user_id}/permissions")
-async def check_user_permissions(user_id: UUID = Path(..., description="User ID"),
+@traced(__name__)
+async def check_user_permissions(request: Request,
+                                 user_id: UUID = Path(..., description="User ID"),
                                  service: RoleService = Depends(get_role_service)) -> UserPermissionsSchema:
     """
     Проверка наличия прав у пользователя
     """
     result = await service.get_user_permissions(user_id=user_id)
     return result
-
-# @router.post("/logout/others", response_model=dict)
-# async def logout_other_sessions():
-#     """
-#     Реализация кнопки "Выйти из остальных аккаунтов"
-#     """
-#     pass

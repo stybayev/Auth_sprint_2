@@ -1,6 +1,8 @@
 from typing import List
 from http import HTTPStatus
-from fastapi import APIRouter, Depends, Path, HTTPException
+from fastapi import APIRouter, Depends, Path, HTTPException, Request
+
+from app.core.tracer import traced
 from app.services.person import PersonServiceABC
 from app.models.persons import Person, Persons
 from app.models.film import Films
@@ -12,8 +14,9 @@ router = APIRouter()
 
 
 @router.get("/{person_id}", response_model=Person)
+@traced(__name__)
 async def get_person(
-        *,
+        request: Request,
         service: PersonServiceABC = Depends(),
         person_id: UUID = Path(..., description="person id")
 ) -> Person or None:
@@ -27,8 +30,9 @@ async def get_person(
 
 
 @router.get("/", response_model=List[Persons])
+@traced(__name__)
 async def get_persons(
-        *,
+        request: Request,
         service: PersonServiceABC = Depends(),
         page_size: int = PaginatedParams.page_size,
         page_number: int = PaginatedParams.page_number
@@ -43,8 +47,9 @@ async def get_persons(
 
 
 @router.get("/{person_id}/film", response_model=list[Films])
+@traced(__name__)
 async def get_film_with_persons_by_id(
-        *,
+        request: Request,
         service: PersonServiceABC = Depends(),
         person_id: UUID = Path(..., description="person's id"),
         page_size: int = PaginatedParams.page_size,

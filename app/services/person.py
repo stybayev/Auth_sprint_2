@@ -1,14 +1,16 @@
-import orjson
-
 from abc import ABC, abstractmethod
 from hashlib import md5
-from app.models.persons import Persons, Person
-from app.models.film import Films
-from app.services.film import FilmCacheRepository, FilmRepository
-from app.models.base_model import SearchParams
-from uuid import UUID
-from app.services.base import RepositoryElastic, RepositoryRedis
 from typing import List
+from uuid import UUID
+
+import orjson
+
+from app.core.tracer import traced
+from app.models.base_model import SearchParams
+from app.models.film import Films
+from app.models.persons import Persons, Person
+from app.services.base import RepositoryElastic, RepositoryRedis
+from app.services.film import FilmCacheRepository, FilmRepository
 
 
 class PersonRepository(RepositoryElastic[Person, Persons]):
@@ -52,6 +54,7 @@ class PersonService(PersonServiceABC):
         self.repository_with_film = repository_with_film
         self.cache_repository_with_film = cache_repository_with_film
 
+    @traced(__name__)
     async def get_by_id(self, doc_id: UUID) -> Person or None:
         # Достаем из кеша
         entity = await self.cache_repository.find(doc_id=doc_id)
@@ -63,6 +66,7 @@ class PersonService(PersonServiceABC):
             await self.cache_repository.put(entity=entity)
         return entity
 
+    @traced(__name__)
     async def get_persons(
             self,
             params: SearchParams
@@ -86,6 +90,7 @@ class PersonService(PersonServiceABC):
             )
         return persons
 
+    @traced(__name__)
     async def get_films_with_person(
             self,
             params: SearchParams
@@ -105,4 +110,3 @@ class PersonService(PersonServiceABC):
                 params=dict(params)
             )
         return films
-

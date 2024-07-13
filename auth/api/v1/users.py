@@ -15,9 +15,9 @@ from auth.utils.pagination import PaginatedParams
 router = APIRouter()
 
 
-@auth.core.tracer.traced("auth_api_register_user")
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register_user(user: UserCreate, service: UserService = Depends(get_user_service)):
+@auth.core.tracer.traced(__name__)
+async def register_user(user: UserCreate, request: Request, service: UserService = Depends(get_user_service)):
     """
     ## Регистрация нового пользователя
 
@@ -44,8 +44,8 @@ async def register_user(user: UserCreate, service: UserService = Depends(get_use
                         last_name=new_user.last_name)
 
 
-@auth.core.tracer.traced("auth_login_user")
 @router.post("/login", response_model=TokenResponse)
+@auth.core.tracer.traced(__name__)
 async def login_user(user: LoginRequest, request: Request, service: UserService = Depends(get_user_service),
                      Authorize: AuthJWT = Depends()):
     """
@@ -72,9 +72,10 @@ async def login_user(user: LoginRequest, request: Request, service: UserService 
     return tokens
 
 
-@auth.core.tracer.traced("auth_refresh_access_token")
 @router.post("/token/refresh", response_model=TokenResponse)
+@auth.core.tracer.traced(__name__)
 async def refresh_access_token(
+        request: Request,
         service: UserService = Depends(get_user_service),
         authorize: AuthJWT = Depends()
 ):
@@ -92,9 +93,10 @@ async def refresh_access_token(
     return await service.refresh_access_token(authorize)
 
 
-@auth.core.tracer.traced("auth_refresh_logout_user")
 @router.post("/logout", response_model=bool)
+@auth.core.tracer.traced(__name__)
 async def logout_user(
+        request: Request,
         service: UserService = Depends(get_user_service),
         authorize: AuthJWT = Depends()
 ):
@@ -109,9 +111,10 @@ async def logout_user(
     return await service.logout_user(authorize)
 
 
-@auth.core.tracer.traced("auth_update_user_credentials")
 @router.patch("/update-credentials", response_model=UserResponse)
+@auth.core.tracer.traced(__name__)
 async def update_user_credentials(
+        request: Request,
         user_credentials: UpdateUserCredentialsRequest,
         service: UserService = Depends(get_user_service),
         Authorize: AuthJWT = Depends()
@@ -132,7 +135,6 @@ async def update_user_credentials(
       - `last_name`: Фамилия пользователя.
     """
     Authorize.jwt_required()
-
     user_id = uuid.UUID(Authorize.get_jwt_subject())
 
     updated_user = await service.update_user_credentials(
@@ -148,9 +150,10 @@ async def update_user_credentials(
     )
 
 
-@auth.core.tracer.traced("auth_update_get_login_history")
 @router.get("/login/history", response_model=List[LoginHistoryResponse])
+@auth.core.tracer.traced(__name__)
 async def get_login_history(
+        request: Request,
         service: UserService = Depends(get_user_service),
         authorize: AuthJWT = Depends(),
         page_size: int = PaginatedParams.page_size,

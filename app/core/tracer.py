@@ -8,13 +8,21 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 
-def traced(span_name: str):
-    # Декоратор для подключения трейсера к запросу
+def traced(name: str):
+    """
+    Декоратор для подключения трейсера к запросу
+    """
+
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
             tracer = trace.get_tracer(__name__)
-            with tracer.start_as_current_span(span_name):
+            span_name = name + "." + func.__name__
+            with tracer.start_as_current_span(span_name) as span:
+                request = kwargs.get("request")
+                if request:
+                    request_id = request.headers.get('X-Request-Id')
+                    span.set_attribute('http.request_id', request_id)
                 return await func(*args, **kwargs)
 
         return wrapper

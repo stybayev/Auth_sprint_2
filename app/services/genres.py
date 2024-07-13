@@ -1,12 +1,14 @@
-import orjson
-
 from abc import ABC, abstractmethod
 from hashlib import md5
-from app.models.genre import Genre, Genres
-from app.models.base_model import SearchParams
-from uuid import UUID
-from app.services.base import RepositoryElastic, RepositoryRedis
 from typing import List
+from uuid import UUID
+
+import orjson
+
+from app.core.tracer import traced
+from app.models.base_model import SearchParams
+from app.models.genre import Genre, Genres
+from app.services.base import RepositoryElastic, RepositoryRedis
 
 
 class GenreRepository(RepositoryElastic[Genre, Genres]):
@@ -39,6 +41,7 @@ class GenreService(GenreServiceABC):
         self._repository = repository
         self.cache_repository = cache_repository
 
+    @traced(__name__)
     async def get_by_id(self, doc_id: UUID) -> Genre or None:
         # Достаем из кеша
         entity = await self.cache_repository.find(doc_id=doc_id)
@@ -50,6 +53,7 @@ class GenreService(GenreServiceABC):
             await self.cache_repository.put(entity=entity)
         return entity
 
+    @traced(__name__)
     async def get_genres(
             self,
             params: SearchParams
