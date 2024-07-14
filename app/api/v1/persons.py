@@ -20,6 +20,18 @@ async def get_person(
         service: PersonServiceABC = Depends(),
         person_id: UUID = Path(..., description="person id")
 ) -> Person or None:
+    """
+    ## Получение информации об участнике
+
+    Этот эндпоинт позволяет получить подробную информацию об участнике по его уникальному идентификатору.
+
+    ### Параметры:
+    - **person_id**: Уникальный идентификатор участника.
+
+    ### Возвращает:
+    - Объект участника с подробной информацией.
+    - Если участник не найден, возвращает ошибку `404 Not Found`.
+    """
     person = await service.get_by_id(doc_id=person_id)
     if not person:
         raise HTTPException(
@@ -37,6 +49,18 @@ async def get_persons(
         page_size: int = PaginatedParams.page_size,
         page_number: int = PaginatedParams.page_number
 ) -> List[Persons]:
+    """
+    ## Получение списка участников
+
+    Этот эндпоинт позволяет получить список участников с возможностью пагинации.
+
+    ### Параметры:
+    - **page_size**: Количество участников на странице (по умолчанию: `10`).
+    - **page_number**: Номер страницы (по умолчанию: `1`).
+
+    ### Возвращает:
+    - Список участников с информацией о каждом человеке.
+    """
     persons = await service.get_persons(
         params=SearchParams(
             page_size=page_size,
@@ -55,6 +79,19 @@ async def get_film_with_persons_by_id(
         page_size: int = PaginatedParams.page_size,
         page_number: int = PaginatedParams.page_number
 ) -> List[Films]:
+    """
+    ## Получение фильмов с участием персоны
+
+    Этот эндпоинт позволяет получить список фильмов, в которых участвовал персона, по его уникальному идентификатору.
+
+    ### Параметры:
+    - **person_id**: Уникальный идентификатор персоны.
+    - **page_size**: Количество фильмов на странице (по умолчанию: `10`).
+    - **page_number**: Номер страницы (по умолчанию: `1`).
+
+    ### Возвращает:
+    - Список фильмов, в которых участвовал персона.
+    """
     films = await service.get_films_with_person(
         params=SearchParams(
             person_id=person_id,

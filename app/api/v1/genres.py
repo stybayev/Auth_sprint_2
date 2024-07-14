@@ -20,6 +20,18 @@ async def get_genre(
         service: GenreServiceABC = Depends(),
         genre_id: UUID = Path(..., description="genre id")
 ) -> Genre or None:
+    """
+    ## Получение информации о жанре
+
+    Этот эндпоинт позволяет получить подробную информацию о жанре по его уникальному идентификатору.
+
+    ### Параметры:
+    - **genre_id**: Уникальный идентификатор жанра.
+
+    ### Возвращает:
+    - Объект жанра с подробной информацией.
+    - Если жанр не найден, возвращает ошибку `404 Not Found`.
+    """
     genre = await service.get_by_id(doc_id=genre_id)
     if not genre:
         raise HTTPException(
@@ -37,6 +49,18 @@ async def get_genres(
         page_size: int = PaginatedParams.page_size,
         page_number: int = PaginatedParams.page_number
 ) -> List[Genres]:
+    """
+    ## Получение списка жанров
+
+    Этот эндпоинт позволяет получить список жанров с возможностью пагинации.
+
+    ### Параметры:
+    - **page_size**: Количество жанров на странице (по умолчанию: `10`).
+    - **page_number**: Номер страницы (по умолчанию: `1`).
+
+    ### Возвращает:
+    - Список жанров с информацией о каждом жанре.
+    """
     genres = await service.get_genres(
         params=SearchParams(
             page_size=page_size,
