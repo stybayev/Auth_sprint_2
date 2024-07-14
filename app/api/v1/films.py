@@ -1,14 +1,16 @@
-from typing import List
 from http import HTTPStatus
-from fastapi import APIRouter, Depends, Path, HTTPException, Query, Request
-
-import app.core.tracer
-from app.services.film import FilmServiceABC
-from app.models.film import Film, Films
-from app.models.base_model import SearchParams
-from app.utils.dc_objects import PaginatedParams
+from typing import List
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, Path, HTTPException, Query, Request
+from fastapi_jwt_auth import AuthJWT
+
 from app.core.tracer import traced
+from app.models.base_model import SearchParams
+from app.models.film import Film, Films
+from app.services.film import FilmServiceABC
+from app.utils.dc_objects import PaginatedParams
+from auth.core.jwt import security_jwt
 
 router = APIRouter()
 
