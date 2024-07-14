@@ -4,8 +4,6 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import FileField, constraints
 from django.utils.translation import gettext_lazy as _
-from storages.backends.s3boto3 import S3Boto3Storage
-
 from movies.storage import CustomStorage
 
 
@@ -52,6 +50,7 @@ class Filmwork(UUIDMixin, TimeStampledMixin):
         choices=TypeChoice.choices, default=TypeChoice.TV_SHOW, null=True
     )
     file = FileField(storage=CustomStorage(), null=True, upload_to="uploads/%Y/%m/%d/")
+    label = models.CharField(max_length=255, null=True)
     genres = models.ManyToManyField(Genre, through="GenreFilmwork")
     persons = models.ManyToManyField("Person", through="PersonFilmwork")
 
