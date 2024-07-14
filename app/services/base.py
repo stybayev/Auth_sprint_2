@@ -88,7 +88,7 @@ class RepositoryElastic(Repository, Generic[ModelType, PaginatedModel]):
                     body=query_body
                 )
             except Exception as e:
-                logging.error(f"Failed to fetch model from Elasticsearch: {e}")
+                logging.debug(f"Failed to fetch model from Elasticsearch: {e}")
                 return []
         models = []
         entities = response["hits"]["hits"]
@@ -126,25 +126,38 @@ class RepositoryElastic(Repository, Generic[ModelType, PaginatedModel]):
                     "bool": {
                         "should": [
                             {
-                                "match_phrase": {
-                                    "director.id": {"query": params.person_id}
+                                "nested": {
+                                    "path": "actors",
+                                    "query": {
+                                        "term": {
+                                            "actors.id": params.person_id
+                                        }
+                                    }
                                 }
                             },
                             {
-                                "match_phrase": {
-                                    "actors.id": {"query": params.person_id}
+                                "nested": {
+                                    "path": "director",
+                                    "query": {
+                                        "term": {
+                                            "director.id": params.person_id
+                                        }
+                                    }
                                 }
                             },
                             {
-                                "match_phrase": {
-                                    "writers.id": {"query": params.person_id}
+                                "nested": {
+                                    "path": "writers",
+                                    "query": {
+                                        "term": {
+                                            "writers.id": params.person_id
+                                        }
+                                    }
                                 }
                             }
                         ]
                     }
-                },
-                "from": offset,
-                "size": params.page_size
+                }
             }
         else:
             query_body = {

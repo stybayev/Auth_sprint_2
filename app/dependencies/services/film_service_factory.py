@@ -31,5 +31,5 @@ def create_film_service(
             redis=redis_session,
             index="movies"
         ),
-        token_service=TokenService(redis_session)
+        # token_service=TokenService(redis_session)
     )

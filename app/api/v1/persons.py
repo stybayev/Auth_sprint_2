@@ -46,7 +46,7 @@ async def get_persons(
     return persons
 
 
-@router.get("/{person_id}/film", response_model=list[Films])
+@router.get("/{person_id}/film/", response_model=list[Films])
 @traced(__name__)
 async def get_film_with_persons_by_id(
         request: Request,
