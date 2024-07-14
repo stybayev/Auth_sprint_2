@@ -43,4 +43,3 @@ python-jose==3.3.0
 sqlalchemy==2.0.30
 asyncpg==0.29.0
 Werkzeug==3.0.3
-
